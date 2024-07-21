@@ -513,7 +513,7 @@ app.post("/api/places/add", upload.array("images"), (req, res) => {
   } = req.body;
 
   const addedPhotos = req.files; // Array of file objects
-
+ console.log("added photos " , addedPhotos )
   // Generate unique directory name for each place using UUID
   const placeId = uuidv4();
   const folderName = placeId; // Assigning folderName to placeId
@@ -546,6 +546,7 @@ app.post("/api/places/add", upload.array("images"), (req, res) => {
       });
     }
   });
+  console.log("saved photos " , savedPhotos )
 
   // SQL query to insert place details into database
   const sql = `
@@ -558,30 +559,34 @@ app.post("/api/places/add", upload.array("images"), (req, res) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
   `;
 
-  db.query(
-    sql,
-    [
-      title || null, address || null, savedPhotos.map(photo => photo.savedAs).join(',') || null, description || null, perks || null, extraInfo || null,
-      maxGuests || null, price || null, ownerId || null, folderName || null, type || null, sellingMethod || null, ownerPhone || null,
-      homeType || null, farmHasHouse || null, farmHasWater || null, farmHasFarmed || null, landInFaceOfStreet || null,
-      numberOfStreetsInLand || null, spaceGeneral || null, numberOfHomeStage || null, totalStages || null, JSON.stringify(numberOfRooms) || null,
-      buyOrRent || null, rentType || null, ownerStatus || null, location || null, JSON.stringify(amenities) || null, JSON.stringify(hajezDays) || null,
-      hajezType || null, JSON.stringify(variablePrices) || null, publisherState || null, adsAccept || null
-    ],
-    (err, result) => {
-      if (err) {
-        console.log("Failed to add place:", err);
-        return res.status(500).json({
-          message: "Internal server error",
-          error: err.message,
-        });
-      }
-      res.status(200).json({
+  // db.query(
+  //   sql,
+  //   [
+  //     title || null, address || null, savedPhotos.map(photo => photo.savedAs).join(',') || null, description || null, perks || null, extraInfo || null,
+  //     maxGuests || null, price || null, ownerId || null, folderName || null, type || null, sellingMethod || null, ownerPhone || null,
+  //     homeType || null, farmHasHouse || null, farmHasWater || null, farmHasFarmed || null, landInFaceOfStreet || null,
+  //     numberOfStreetsInLand || null, spaceGeneral || null, numberOfHomeStage || null, totalStages || null, JSON.stringify(numberOfRooms) || null,
+  //     buyOrRent || null, rentType || null, ownerStatus || null, location || null, JSON.stringify(amenities) || null, JSON.stringify(hajezDays) || null,
+  //     hajezType || null, JSON.stringify(variablePrices) || null, publisherState || null, adsAccept || null
+  //   ],
+  //   (err, result) => {
+  //     if (err) {
+  //       console.log("Failed to add place:", err);
+  //       return res.status(500).json({
+  //         message: "Internal server error",
+  //         error: err.message,
+  //       });
+  //     }
+  //     res.status(200).json({
+  //       message: "Place added successfully",
+  //       placeId: result.insertId,
+  //     });
+  //   }
+  // );
+   res.status(200).json({
         message: "Place added successfully",
-        placeId: result.insertId,
+        // placeId: result.insertId,
       });
-    }
-  );
 });
 
 // Route to get all places by ownerId
