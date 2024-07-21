@@ -9,8 +9,9 @@ const { v4: uuidv4 } = require("uuid");
 const path = require("path");
 const fs = require("fs");
 const app = express();
-const port = 3100;
+const port = 3003;
 const multer = require("multer");
+const http = require('http');
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -31,23 +32,23 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Create connection to MySQL database
+const db = mysql.createConnection({
+  host: "localhost",
+  user: "sakanwrd_testuser",
+  password: "yassine6Up",
+  database: "sakanwrd_sakani",
+});
 
-  
-  const db = mysql.createConnection({
-    host: "5.9.215.4",
-    user: "sakanwrd_testuser",
-    password: "yassine6Up",
-    database: "sakanwrd_sakani",
-  });
-  db.connect((err) => {
-    if (err) {
-      console.error('Error connecting to database:', err.stack);
-      return;
-    }
-    console.log('Connected to MySQL database');
-  });
-  
+
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to database:', err.stack);
+    return;
+  }
+  console.log('Connected to MySQL database');
+});
+
+
 
 // Function to send verification code via SMS
 const sendVerificationCode = async (to, message) => {
@@ -93,8 +94,9 @@ const sendVerificationCode = async (to, message) => {
   });
 };
 
-
-
+app.get("/",(req , res)=>{
+    res.send("work" )
+})
 
 // Register a new user with phone number
 app.post("/register", (req, res) => {
@@ -471,10 +473,13 @@ function generateResetToken() {
 
 // Route to handle adding a new place
 // Route to handle adding a new place
-app.post("/api/places/add", upload.array("photos"), (req, res) => {
+const getValueOrDefault = (value, defaultValue = null) => {
+  return value !== undefined && value !== null ? value : defaultValue;
+};
+
+app.post("/api/places/add", upload.array("images"), (req, res) => {
   const {
     title,
-    type ,
     address,
     description,
     perks,
@@ -482,63 +487,90 @@ app.post("/api/places/add", upload.array("photos"), (req, res) => {
     maxGuests,
     price,
     ownerId,
-    sellingMethod ,
-    ownerPhone
+    type,
+    sellingMethod,
+    ownerPhone,
+    homeType,
+    farmHasHouse,
+    farmHasWater,
+    farmHasFarmed,
+    landInFaceOfStreet,
+    numberOfStreetsInLand,
+    spaceGeneral,
+    numberOfHomeStage,
+    totalStages,
+    numberOfRooms,
+    buyOrRent,
+    rentType,
+    ownerStatus,
+    location,
+    amenities,
+    hajezDays,
+    hajezType,
+    variablePrices,
+    publisherState,
+    adsAccept
   } = req.body;
+
   const addedPhotos = req.files; // Array of file objects
 
   // Generate unique directory name for each place using UUID
   const placeId = uuidv4();
   const folderName = placeId; // Assigning folderName to placeId
 
-  const uploadDir = path.join(__dirname, "uploads", placeId);
+  const uploadDir = path.join(__dirname, 'uploads', folderName);
 
   // Create the directory if it doesn't exist
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
 
-  // Move uploaded photos to the unique directory
   const savedPhotos = [];
+  
+  // Move uploaded photos to the unique directory
   addedPhotos.forEach((file, index) => {
     const oldPath = file.path; // Temporary path
     const newPath = path.join(uploadDir, `${index + 1}_${file.originalname}`); // Rename files if necessary
 
     try {
       fs.renameSync(oldPath, newPath);
-      savedPhotos.push(`${index + 1}_${file.originalname}`);
+      savedPhotos.push({
+        originalName: file.originalname,
+        savedAs: path.join(folderName, `${index + 1}_${file.originalname}`)
+      });
     } catch (err) {
-      console.error("Failed to move file:", err);
+      console.error('Failed to move file:', err);
       return res.status(500).json({
-        message: "Internal server error",
-        error: err.message,
+        message: 'Internal server error',
+        error: err.message
       });
     }
   });
 
   // SQL query to insert place details into database
-  const sql =
-    "INSERT INTO places (title, address, photos, description, perks, extra_info, max_guests, price, owner_id, folderName , type , sellingMethod , ownerPhone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?)";
+  const sql = `
+    INSERT INTO places (
+      title, address, photos, description, perks, extra_info, max_guests, price, owner_id, folderName,
+      type, sellingMethod, ownerPhone, home_type, farm_has_house, farm_has_water, farm_has_farmed,
+      land_in_face_of_street, number_of_streets_in_land, space_general, number_of_home_stage, total_stages,
+      number_of_rooms, buy_or_rent, rent_type, owner_status, location, amenities, hajez_days, hajez_type,
+      variable_prices, publisher_state, ads_accept
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+  `;
+
   db.query(
     sql,
     [
-      title,
-      address,
-      savedPhotos.join(","),
-      description,
-      perks,
-      extraInfo,
-      maxGuests,
-      price,
-      ownerId,
-      folderName,
-      type ,
-      sellingMethod ,
-      ownerPhone
+      title || null, address || null, savedPhotos.map(photo => photo.savedAs).join(',') || null, description || null, perks || null, extraInfo || null,
+      maxGuests || null, price || null, ownerId || null, folderName || null, type || null, sellingMethod || null, ownerPhone || null,
+      homeType || null, farmHasHouse || null, farmHasWater || null, farmHasFarmed || null, landInFaceOfStreet || null,
+      numberOfStreetsInLand || null, spaceGeneral || null, numberOfHomeStage || null, totalStages || null, JSON.stringify(numberOfRooms) || null,
+      buyOrRent || null, rentType || null, ownerStatus || null, location || null, JSON.stringify(amenities) || null, JSON.stringify(hajezDays) || null,
+      hajezType || null, JSON.stringify(variablePrices) || null, publisherState || null, adsAccept || null
     ],
     (err, result) => {
       if (err) {
-        console.error("Failed to add place:", err);
+        console.log("Failed to add place:", err);
         return res.status(500).json({
           message: "Internal server error",
           error: err.message,
