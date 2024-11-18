@@ -782,7 +782,7 @@ app.get("/api/places", (req, res) => {
   const { category, type } = req.query;
 
   // Base SQL query
-  let sql = "SELECT * FROM places WHERE approved = true AND active = true";
+  let sql = "SELECT * FROM places WHERE approved = 1 AND active = 1";
   let filters = [];
 
   // Add filters based on query parameters
@@ -1258,7 +1258,7 @@ app.post('/api/places/filter/spesific', (req, res) => {
   const filters = req.body;
 
   // Start with a base query and include conditions for approved and active
-  let query = 'SELECT * FROM places WHERE approved = true AND active = true';
+  let query = 'SELECT * FROM places WHERE approved = 1 AND active = 1';
   const queryParams = [];
 
   // Add conditions only if the corresponding filter is provided
