@@ -1257,69 +1257,91 @@ app.put('/categories/toggle/:slug', (req, res) => {
 app.post('/api/places/filter/spesific', (req, res) => {
   const filters = req.body;
 
-  // Start with a base query and include conditions for approved and active
-  let query = 'SELECT * FROM places WHERE approved = 1 AND active = 1';
-  const queryParams = [];
+  // Start with a base query
+  let query = 'SELECT * FROM places WHERE approved = ? AND active = ?';
+  const queryParams = [1, 1]; // Ensure only approved and active places are fetched
 
-  // Add conditions only if the corresponding filter is provided
+  // Add conditions dynamically based on provided filters
   if (filters.title) {
     query += ' AND title LIKE ?';
     queryParams.push(`%${filters.title}%`);
   }
+
   if (filters.minPrice) {
     query += ' AND price >= ?';
     queryParams.push(filters.minPrice);
   }
+
   if (filters.maxPrice) {
     query += ' AND price <= ?';
     queryParams.push(filters.maxPrice);
   }
+
   if (filters.minSpace) {
     query += ' AND space_general >= ?';
     queryParams.push(filters.minSpace);
   }
+
   if (filters.maxSpace) {
     query += ' AND space_general <= ?';
     queryParams.push(filters.maxSpace);
   }
+
   if (filters.homeType) {
     query += ' AND home_type = ?';
     queryParams.push(filters.homeType);
   }
+
   if (filters.features && Array.isArray(filters.features)) {
     filters.features.forEach((feature) => {
       query += ' AND JSON_CONTAINS(amenities, ?)';
-      queryParams.push(JSON.stringify([feature])); // Ensure each feature is checked in JSON format
+      queryParams.push(JSON.stringify([feature]));
     });
   }
+
   if (filters.negotiation) {
     query += ' AND ads_accept = ?';
     queryParams.push(filters.negotiation);
   }
 
-  // Execute the query with the parameters
+  // Debug the query and parameters for development purposes
+  console.log('Executing SQL query:', query);
+  console.log('Query parameters:', queryParams);
+
+  // Execute the query
   db.query(query, queryParams, (err, results) => {
     if (err) {
-      console.error('Error details:', {
+      // Log detailed error information for debugging
+      console.error('Error executing SQL query:', {
         message: err.message,
         stack: err.stack,
         code: err.code,
-        sql: err.sql // If your library provides SQL string, log it for context
+        sql: err.sql, // Log the actual query string if supported
       });
+
+      // Set a generic error message
       let errorMessage = 'An error occurred while filtering places. Please try again later.';
 
-      // Provide specific error messages based on the error code if applicable
-      if (err.code === 'ER_BAD_DB_ERROR') {
-        errorMessage = 'Database connection issue. Please try again later.';
-      } else if (err.code === 'ER_PARSE_ERROR') {
-        errorMessage = 'Invalid query syntax. Please check your input.';
-      } else if (err.code === 'ER_NO_SUCH_TABLE') {
-        errorMessage = 'The table you are querying does not exist.';
+      // Provide specific error messages based on known error codes
+      switch (err.code) {
+        case 'ER_BAD_DB_ERROR':
+          errorMessage = 'Database connection issue. Please try again later.';
+          break;
+        case 'ER_PARSE_ERROR':
+          errorMessage = 'Invalid query syntax. Please check your input.';
+          break;
+        case 'ER_NO_SUCH_TABLE':
+          errorMessage = 'The table you are querying does not exist.';
+          break;
+        default:
+          // For other errors, keep the generic message
+          break;
       }
 
       return res.status(500).json({ error: errorMessage });
     }
 
+    // Return the results if no error occurred
     res.status(200).json({ places: results });
   });
 });
