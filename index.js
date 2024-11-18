@@ -776,42 +776,42 @@ app.get("/api/images/:folderName/:imageName", (req, res) => {
   }
 });
 
-//   fetch posts Data
 // Route to fetch filtered places
 app.get("/api/places", (req, res) => {
   const { category, type } = req.query;
 
-  // Base SQL query
-  let sql = "SELECT * FROM places WHERE approved = 1 AND active = 1";
-  let filters = [];
+  // Base SQL query and parameters
+  let sql = "SELECT * FROM places WHERE approved = ? AND active = ?";
+  const queryParams = [1, 1]; // Values for `approved` and `active`
 
   // Add filters based on query parameters
   if (type) {
-    filters.push(`buy_or_rent = '${type}'`);
+    sql += " AND buy_or_rent = ?";
+    queryParams.push(type);
   }
 
-  // Check if category is not 'all' before adding the filter
   if (category && category.toLowerCase() !== "الكل") {
-    filters.push(`home_type LIKE '%${category}%'`);
+    sql += " AND home_type LIKE ?";
+    queryParams.push(`%${category}%`);
   }
 
-  // Append additional filters to SQL query if any
-  if (filters.length > 0) {
-    sql += " AND " + filters.join(" AND ");
-  }
+  console.log("Executing SQL query:", sql, "with parameters:", queryParams);
 
-  console.log("Executing SQL query:", sql);
-
-  // Execute SQL query
-  db.query(sql, (err, results) => {
+  // Execute the query
+  db.query(sql, queryParams, (err, results) => {
     if (err) {
       console.error("Error fetching places:", err);
+
+    
       return res.status(500).json({ error: "Internal Server Error" });
     }
-    const places = results.reverse();
+
+    // Reverse results (if needed) and send response
+    const places = results.reverse(); // Optional: Reverse order for display
     res.json({ places });
   });
 });
+
 
 // Route to fetch filtered places
 app.get("/api/admin/places", (req, res) => {
